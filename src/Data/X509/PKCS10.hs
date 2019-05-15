@@ -24,6 +24,7 @@ module Data.X509.PKCS10
     , Version(..)
     , Signature(..)
     , KeyPair(..)
+    , HashAlgorithmConversion(..)
     , makeX520Attributes
     , generateCSR
     , csrToSigned
@@ -33,6 +34,10 @@ module Data.X509.PKCS10
     , toPEM
     , toNewFormatPEM
     , fromPEM
+    , makeCertReqInfo
+    , makeCertReq
+    , encodeToDER
+    , pubKeyECC'
     ) where
 
 import           Control.Applicative      ((<$>), (<*>))
@@ -476,6 +481,14 @@ generateCSR subject extAttrs (KeyPairECC pubKey privKey curveName) hashAlg =
     f = Right . certReq . encodeToDER
     certReq s = makeCertReq certReqInfo s hashAlg PubKeyALG_EC    
 
+{-generateCSR subject extAttrs (KeyPairECC pubKey privKey curveName) hashAlg =
+  f <$> sign certReqInfo
+  where
+    certReqInfo = makeCertReqInfo subject extAttrs $ pubKeyECC pubKey curveName
+    sign = ECC.sign privKey hashAlg . encodeToDER
+    f = Right . certReq . encodeToDER
+    certReq s = makeCertReq certReqInfo s hashAlg PubKeyALG_EC  
+-}
 -- | Sign CSR.
 csrToSigned :: CertificationRequest -> SignedCertificationRequest
 csrToSigned req = SignedCertificationRequest {
@@ -569,3 +582,7 @@ pubKeyECC pb curveName =
     bs    = B.cons 4 (i2ospOf_ bytes x `B.append` i2ospOf_ bytes y)
     bits  = ECC.curveSizeBits (ECC.getCurveByName curveName)
     bytes = (bits + 7) `div` 8
+
+pubKeyECC' :: BC.ByteString -> ECC.CurveName ->  PubKey
+pubKeyECC' pb curveName = PubKeyEC (PubKeyEC_Named curveName (SerializedPoint pb))
+  
